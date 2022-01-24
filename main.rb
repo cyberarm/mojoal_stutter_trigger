@@ -23,6 +23,7 @@ class Window < Gosu::Window
     self.caption = "mojoAL Stutter Trigger"
 
     @no_mojoal = Gem::Version.new(Gosu::VERSION) < Gem::Version.new("1.4.0")
+    @bug_1 = false
 
     @song = Gosu::Song.new("#{GAME_ROOT}/#{SONG}")
     @font = Gosu::Font.new(28)
@@ -38,13 +39,13 @@ class Window < Gosu::Window
     Gosu.draw_rect(PADDING, PADDING, width - PADDING2, height - PADDING2, 0xdd_222222)
 
     unless @started
-      @font.draw_markup("mojoAL is not in use!\n\n    Using <c=f80>Gosu #{Gosu::VERSION}</c>, 1.4.0 required!\n\n    Press TAB to continue anyways.", 10, 10, 10) if @no_mojoal
-      @font.draw_text("Press ENTER | RETURN to start...\n\n    CHECK YOUR VOLUME!", 10, 10, 10) unless @no_mojoal
+      @font.draw_markup("mojoAL is not in use!\n\n    Using <c=f80>Gosu #{Gosu::VERSION}</c>, 1.4.0 required!\n\n    Press TAB[2] or SHIFT+TAB[1] to continue anyways.", 10, 10, 10) if @no_mojoal
+      @font.draw_text("Press SPACE[bug 1]\nor ENTER|RETURN[bug 2] to start...\n\n    CHECK YOUR VOLUME!", 10, 10, 10) unless @no_mojoal
       return
     end
 
     @font.draw_text("Playing #{(SONG_TIMEOUT * 0.001).round} seconds of #{SONG}", 10, 10, 10) if @song.playing?
-    @font.draw_text("Plays: #{@plays}", 10, 10 + @font.height, 10)
+    @font.draw_text("Plays: #{@plays} #{@bug_1 ? '(bug 1)' : '(bug 2)'}", 10, 10 + @font.height, 10)
     @font.draw_markup("<c=f00>mojoAL not in use!</c>", 10, height - (@font.height + PADDING), 10) if @no_mojoal
   end
 
@@ -52,9 +53,10 @@ class Window < Gosu::Window
     return unless @started
 
     if @song.playing?
-      @song.stop if Gosu.milliseconds >= @started_playing + SONG_TIMEOUT
+      @song.stop if Gosu.milliseconds >= @started_playing + SONG_TIMEOUT && !@bug_1
     else
       @started_playing = Gosu.milliseconds
+      @song = Gosu::Song.new("#{GAME_ROOT}/#{SONG}") if @bug_1
       @song.play
       @plays += 1
     end
@@ -68,8 +70,17 @@ class Window < Gosu::Window
       return if @no_mojoal
 
       @started = true
+    when Gosu::KB_SPACE
+      return if @no_mojoal
+
+      @started = true
+      @bug_1 = true
     when Gosu::KB_TAB
       @started = true
+      @bug_1 = Gosu.button_down?(Gosu::KB_LEFT_SHIFT)
+    when Gosu::KB_Q, Gosu::KB_ESCAPE
+      @song.stop
+      exit
     end
   end
 end
